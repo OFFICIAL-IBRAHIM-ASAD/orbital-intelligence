@@ -1,0 +1,148 @@
+/* --- GLOBAL RESETS & TYPOGRAPHY --- */
+body, html {
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: #050505; /* Deepest black */
+  color: #c9d1d9; /* Soft tech grey for readability */
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  overflow: hidden; /* Prevents the whole page from scrolling */
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+  display: flex;
+}
+
+/* --- LAYOUT STRUCTURE --- */
+.dashboard-container {
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+}
+
+.globe-container {
+  flex-grow: 1;
+  position: relative;
+}
+
+/* --- THE SIDEBAR COMMAND CENTER --- */
+.sidebar {
+  width: 400px; /* Slightly widened to accommodate high-res heatmaps */
+  background-color: #0d1117; /* Cool dark github-style black */
+  border-left: 1px solid #30363d;
+  padding: 25px 20px;
+  display: flex;
+  flex-direction: column;
+  z-index: 10;
+  box-shadow: -10px 0 30px rgba(0,0,0,0.8);
+  
+  /* CRITICAL: Enables vertical scrolling for overflow content */
+  overflow-y: auto; 
+}
+
+/* Tactical Dark-Mode Scrollbar */
+.sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+.sidebar::-webkit-scrollbar-track {
+  background: #0d1117; 
+}
+.sidebar::-webkit-scrollbar-thumb {
+  background: #30363d; 
+  border-radius: 4px;
+}
+.sidebar::-webkit-scrollbar-thumb:hover {
+  background: #484f58; 
+}
+
+.sidebar h2 {
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-size: 1.1em;
+  color: #e6edf3;
+  margin-top: 0;
+  margin-bottom: 20px;
+}
+
+/* --- LEDGER CARDS --- */
+.claim-card {
+  background-color: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 18px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  transition: border-color 0.2s ease;
+}
+
+.claim-card:hover {
+  border-color: #8b949e; /* Subtle highlight when hovering over a target */
+}
+
+.claim-card h3 {
+  margin-top: 0;
+  color: #ffffff;
+  font-size: 1.15em;
+  letter-spacing: 0.5px;
+}
+
+.claim-card p {
+  line-height: 1.5;
+}
+
+/* --- STATUS INDICATORS --- */
+.verified { color: #3fb950; font-weight: 600; text-shadow: 0 0 8px rgba(63, 185, 80, 0.3); }
+.partial { color: #d29922; font-weight: 600; text-shadow: 0 0 8px rgba(210, 153, 34, 0.3); }
+.unverified { color: #f85149; font-weight: 600; text-shadow: 0 0 8px rgba(248, 81, 73, 0.3); }
+.pending { color: #58a6ff; font-weight: 600; animation: pulse 2s infinite; }
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.6; }
+  100% { opacity: 1; }
+}
+
+/* --- TACTICAL BUTTON --- */
+.verify-btn {
+  width: 100%;
+  margin-top: 15px;
+  padding: 12px;
+  background-color: transparent;
+  color: #58a6ff;
+  border: 1px solid #1f6feb;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  font-size: 0.85em;
+  transition: all 0.2s ease;
+}
+
+.verify-btn:hover {
+  background-color: rgba(31, 111, 235, 0.1);
+  box-shadow: 0 0 15px rgba(31, 111, 235, 0.2);
+  border-color: #58a6ff;
+}
+
+/* --- DYNAMIC AI IMAGES --- */
+.xai-container img, 
+.ndvi-container img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid #444c56 !important;
+  border-radius: 4px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+  background-color: #000; /* Prevents white flashes while loading */
+}
+
+.xai-container h4, 
+.ndvi-container h4 {
+  color: #e6edf3;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}

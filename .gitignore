@@ -1,0 +1,20 @@
+# Environments
+venv/
+.env
+
+# Python Caches
+__pycache__/
+*.py[cod]
+
+# Heavy ML Weights & Datasets
+data/raw/
+data/weights/
+data/processed/
+
+# Kaggle/Zip leftovers
+*.zip
+*.tar.gz
+
+# Node/React heavy folders
+frontend/node_modules/
+frontend/dist/
