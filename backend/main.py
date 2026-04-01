@@ -6,12 +6,13 @@ import json
 # 1. FIRST: Tell Python to look in the parent folder
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-# 2. SECOND: Import satellite client and our newly trained AI engine
-from backend.satellite_client import fetch_orbital_data, initialize_engine  
-from ml_core.inference import run_analysis 
+# 2. SECOND: Import satellite client, AI engine, and cost estimator
+from backend.satellite_client import fetch_orbital_data, initialize_engine
+from ml_core.inference import run_analysis
+from backend.cost_estimator import estimate_damage_cost
 
 # 3. THIRD: Standard FastAPI imports
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -98,39 +99,84 @@ def analyze_dynamic_target(claim_id: int):
     print(f"Initiating live satellite uplink for coordinates: {claim['latitude']}, {claim['longitude']}")
 
     try:
-        # 1. Download LIVE True Color data from Space
-        # This matches the new return sequence from satellite_client.py
-        pre_png, post_png, ndvi_png, _ = fetch_orbital_data(
-            lat=claim['latitude'], 
-            lon=claim['longitude'], 
-            claim_id=claim_id, 
+        # 1. Download LIVE True Color + NDVI imagery from Space
+        #    Returns: pre_png, post_png, ndvi_delta_png, ndvi_pre_png
+        pre_png, post_png, ndvi_delta_png, ndvi_pre_png = fetch_orbital_data(
+            lat=claim['latitude'],
+            lon=claim['longitude'],
+            claim_id=claim_id,
             output_dir=processed_dir
         )
-        
+
         # 2. Define exactly where the AI should save the resulting XAI Heatmap
         xai_filename = f"heatmap_claim_{claim_id}.png"
         xai_output_path = os.path.join(processed_dir, xai_filename)
-        
+
         # 3. Pass the downloaded optical PNGs directly into the PyTorch AI
         analysis_results = run_analysis(
-            pre_path=pre_png, 
-            post_path=post_png, 
+            pre_path=pre_png,
+            post_path=post_png,
             output_path=xai_output_path
         )
-        
+
         damage_percentage = analysis_results["damage_percentage"]
-        ndvi_filename = os.path.basename(ndvi_png)
+
+        # 4. Compute infrastructure cost estimate
+        cost_info = estimate_damage_cost(
+            damage_percentage=damage_percentage,
+            lat=claim['latitude'],
+            lon=claim['longitude'],
+        )
+
+        # Store damage_percentage and cost on the claim for the /api/cost_estimate endpoint
+        claim['damage_percentage'] = damage_percentage
+        claim['cost_info'] = cost_info
 
     except Exception as e:
         print(f"Pipeline Error: {e}")
         return {"error": "Satellite imagery or AI inference failed for this region."}
 
-    # 4. Generate the final empirical verdict based on the model's output
+    # 5. Generate the final empirical verdict based on the model's output
     verdict = "Verified" if damage_percentage > 5.0 else "Unverified"
 
     return {
         "verdict": verdict,
-        "details": f"Live orbital scan and AI analysis complete for {claim['latitude']:.2f}, {claim['longitude']:.2f}. AI confidence shows {damage_percentage}% of sector structurally compromised.",
-        "xai_heatmap_url": f"http://localhost:8000/assets/{xai_filename}",
-        "ndvi_map_url": f"http://localhost:8000/assets/{ndvi_filename}"
+        "details": (
+            f"Live orbital scan and AI analysis complete for "
+            f"{claim['latitude']:.2f}, {claim['longitude']:.2f}. "
+            f"AI confidence shows {damage_percentage}% of sector structurally compromised."
+        ),
+        "xai_heatmap_url":   f"http://localhost:8000/assets/{xai_filename}",
+        "ndvi_map_url":      f"http://localhost:8000/assets/{os.path.basename(ndvi_delta_png)}",
+        "ndvi_pre_url":      f"http://localhost:8000/assets/{os.path.basename(ndvi_pre_png)}",
+        "pre_optical_url":   f"http://localhost:8000/assets/{os.path.basename(pre_png)}",
+        "post_optical_url":  f"http://localhost:8000/assets/{os.path.basename(post_png)}",
+        "cost_estimate":     cost_info,
+    }
+
+
+# --- INFRASTRUCTURE COST ESTIMATE ENDPOINT ---
+@app.get("/api/cost_estimate/{claim_id}")
+def get_cost_estimate(claim_id: int):
+    """
+    Returns the most-recently computed infrastructure damage cost for a claim.
+    The /api/analyze/{id} pipeline must have been run first to populate
+    the damage_percentage and cost_info fields.
+    """
+    claim = next((c for c in global_ledger if c["id"] == claim_id), None)
+    if not claim:
+        raise HTTPException(status_code=404, detail="Claim not found")
+
+    if "damage_percentage" not in claim or "cost_info" not in claim:
+        raise HTTPException(
+            status_code=400,
+            detail="Analysis not yet performed. Run /api/analyze/{id} first."
+        )
+
+    return {
+        "claim_id":         claim_id,
+        "latitude":         claim["latitude"],
+        "longitude":        claim["longitude"],
+        "damage_percentage": claim["damage_percentage"],
+        **claim["cost_info"],
     }
